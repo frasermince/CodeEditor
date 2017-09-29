@@ -4,6 +4,7 @@ module Lib
     , createText
     , parseCommand
     , Editor
+    , MonadStack
     , Command(..)
     ) where
 import Control.Monad.Identity (Identity, runIdentity)
@@ -14,24 +15,11 @@ import Text.Parsec.Char (anyChar)
 import Control.Applicative ((<$>), (<$))
 import Control.Monad.State.Strict (StateT, get, put, runStateT, modify)
 import Control.Monad.Except (ExceptT, throwError, runExceptT)
-import Control.Monad.IO.Class (liftIO)
 import Pipes (Producer, for, each, yield)
 
--- runEditor e = runExceptT $ runStateT e [""]
--- runEditorForState :: Editor -> [Text]
--- runEditorForState e = state
---   where (_, state) = case runEditor e of
---                        (Left _) -> (return (), [pack ""])
---                        (Right tuple) -> tuple
-
--- runEditorForValue :: Editor -> IO ()
--- runEditorForValue e = value
---   where (value, _) = case runEditor e of
---                        Left error -> (putStrLn $ "Error: " ++ show error, [])
---                        Right tuple -> tuple
-
--- type Editor = ExceptT ParseError (StateT [Text] Identity) (IO ())
-type Editor = Producer Text (StateT [Text] (ExceptT ParseError IO)) ()
+type MonadStack m = StateT [Text] m
+type ExecMonadStack = MonadStack (ExceptT ParseError IO)
+type Editor = Producer Text ExecMonadStack ()
 
 data Command = Append Text | Delete Int | Print Int | Undo
                deriving (Eq)
@@ -41,19 +29,19 @@ instance Show Command where
   show (Print i) = "Print: " ++ show i
   show Undo = "Undo"
 
-createText :: [String] -> Editor
+createText :: [String] -> Producer Text ExecMonadStack ()
 createText commands = foldCommands
-  where foldCommands :: Editor
+  where foldCommands :: Producer Text ExecMonadStack ()
         foldCommands = for (each commands) foldString
 
-        foldString :: String -> Editor
+        foldString :: String -> Producer Text ExecMonadStack ()
         foldString command = do
           c <- either throwError return (parseCommand command)
           applyCommand c
 
-applyCommand :: Command -> Editor
+applyCommand :: Monad m => Command -> Producer Text (StateT [Text] m) ()
 applyCommand (Append str) = modify $ \(x : xs) -> append x str : x : xs
-applyCommand (Delete num) = modify $ \(x : xs) -> (dropEnd num x) : x : xs
+applyCommand (Delete num) = modify $ \(x : xs) -> dropEnd num x : x : xs
 applyCommand Undo         = modify $ \(x : xs) -> xs
 applyCommand (Print num)  = do x : xs <- get
                                yield $ singleton $ index x (num - 1)
