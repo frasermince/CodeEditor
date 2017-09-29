@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Control.Monad (replicateM)
 import Lib
 import Text.Parsec (ParseError)
 import Data.Text (unpack)
@@ -10,6 +9,7 @@ import qualified Pipes.Prelude as P
 import Pipes (runEffect, (>->))
 import Control.Monad.Except (runExceptT)
 import Control.Monad.IO.Class (liftIO)
+import Data.Vector (replicateM)
 
 main :: IO ()
 main = do
