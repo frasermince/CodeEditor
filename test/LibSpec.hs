@@ -4,41 +4,44 @@ import Test.Hspec
 import Control.Monad.State.Lazy (get, put)
 import Data.Text (Text)
 import Lib
-import Pipes (runEffect)
+import Pipes (Producer, for, each, yield, (>->))
 import Pipes.Prelude (toListM)
 import Control.Monad.Identity (Identity, runIdentity)
-import Control.Monad.State.Strict (runStateT)
+import Control.Monad.State.Strict (runStateT, StateT)
 import Data.Either (isLeft)
 
-type TestMonadStack = MonadStack Identity
-editor :: [Text] -> TestMonadStack ()
-editor text = put text
+type TestMonadStack = StateT [Text] Identity
 unwrap :: TestMonadStack a -> (a, [Text])
 unwrap stack = runIdentity $ runStateT stack [""]
 
 getState = head . snd . unwrap
 getValue = head . fst . unwrap
 
+testProducer :: [Command] -> Producer Command TestMonadStack ()
+testProducer list = for (each list) yield
+
+buildListM :: [Command] -> TestMonadStack [Text]
+buildListM commands = toListM $ ((testProducer commands) >-> evalPipeWithState)
+
 spec :: Spec
 spec = do
   describe "applyCommand Append" $ do
     describe "with Append" $
       it "appends the string to the input" $ do
-        let applied = toListM $ applyCommand $ Append "Hello World"
-        getState ((editor [""]) >> applied) `shouldBe` "Hello World"
+        let commands = [Append "Hello World"]
+        (getState $ buildListM commands) `shouldBe` "Hello World"
     describe "with Delete" $
       it "deletes the last N characters where N is 3" $ do
-        let applied = toListM $ applyCommand $ Delete 3
-        getState (editor ["Helloooo"] >> applied) `shouldBe` "Hello"
+        let commands = [Append "Helloooo", Delete 3]
+        (getState $ buildListM commands) `shouldBe` "Hello"
     describe "with Print" $
       it "Adds an element to the print array with the correct character" $ do
-        let applied = toListM $ applyCommand $ Print 4
-        getValue (editor ["Hi There"] >> applied) `shouldBe` "T"
+        let commands = [Append "Hi There", Print 4]
+        (getValue $ buildListM commands) `shouldBe` "T"
     describe "with Undo" $
       it "Undoes the last command" $ do
-        let previousCommand = (editor ["", "abc", "a"])
-        let applied = toListM $ applyCommand Undo
-        getState (previousCommand >> applied) `shouldBe` "abc"
+        let commands = [Append "", Append "abc", Append "a", Undo]
+        (getState $ buildListM commands) `shouldBe` "abc"
 
   describe "parseCommand" $ do
     it "parses an append" $

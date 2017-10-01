@@ -21,7 +21,6 @@ library
                      , mtl
                      , parsec
                      , pipes
-                     , vector
   default-language:    Haskell2010
 
 executable TextEditor-exe
@@ -33,8 +32,8 @@ executable TextEditor-exe
                      , text
                      , mtl
                      , parsec
+                     , criterion
                      , pipes
-                     , vector
   default-language:    Haskell2010
 
 test-suite TextEditor-test

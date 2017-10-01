@@ -1,27 +1,26 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lib
-    ( applyCommand
-    , createText
+    ( parsePipe
+    , evalPipe
+    , evalPipeWithState
     , parseCommand
-    , Editor
-    , MonadStack
+    , ExecMonadStack
     , Command(..)
     ) where
+import Control.Monad (forever)
 import Control.Monad.Identity (Identity, runIdentity)
 import Data.Text (Text, index, append, dropEnd, singleton, pack, unpack)
 import Text.Parsec ((<|>), parse, ParseError, string, many, many1, digit, eof, oneOf)
-import Text.Parsec.String (Parser)
+import Text.Parsec.Text (Parser)
 import Text.Parsec.Char (anyChar)
 import Control.Applicative ((<$>), (<$))
 import Control.Monad (void)
 import Control.Monad.State.Strict (StateT, get, put, runStateT, modify)
 import Control.Monad.Except (ExceptT, throwError, runExceptT)
-import Pipes (Producer, for, each, yield)
-import Data.Vector (Vector)
+import Pipes (Pipe, yield, await)
+import Pipes.Lift (evalStateP)
 
-type MonadStack m = StateT [Text] m
-type ExecMonadStack = MonadStack (ExceptT ParseError IO)
-type Editor = Producer Text ExecMonadStack ()
+type ExecMonadStack = ExceptT ParseError IO
 
 data Command = Append Text | Delete Int | Print Int | Undo
                deriving (Eq)
@@ -31,30 +30,32 @@ instance Show Command where
   show (Print i) = "Print: " ++ show i
   show Undo = "Undo"
 
-createText :: Vector String -> Producer Text ExecMonadStack ()
-createText commands = foldCommands
-  where foldCommands :: Producer Text ExecMonadStack ()
-        foldCommands = for (each commands) foldString
+parsePipe :: Monad m => Pipe Text Command (ExceptT ParseError m) ()
+parsePipe = forever $ do
+  command <- await
+  c <- either throwError return (parseCommand command)
+  yield c
 
-        foldString :: String -> Producer Text ExecMonadStack ()
-        foldString command = do
-          c <- either throwError return (parseCommand command)
-          applyCommand c
+evalPipe :: Monad m => Pipe Command Text m ()
+evalPipe = evalStateP [""] evalPipeWithState
 
-applyCommand :: Monad m => Command -> Producer Text (StateT [Text] m) ()
-applyCommand (Append str) = modify $ \(x : xs) -> append x str : x : xs
-applyCommand (Delete num) = modify $ \(x : xs) -> dropEnd num x : x : xs
-applyCommand Undo         = modify $ \(x : xs) -> xs
-applyCommand (Print num)  = do x : xs <- get
-                               yield $ singleton $ index x (num - 1)
+evalPipeWithState :: Monad m => Pipe Command Text (StateT [Text] m) ()
+evalPipeWithState = forever $ do command <- await
+                                 applyCommand command
+  where applyCommand :: Monad m => Command -> Pipe Command Text (StateT [Text] m) ()
+        applyCommand (Append str) = modify $ \(x : xs) -> append x str : x : xs
+        applyCommand (Delete num) = modify $ \(x : xs) -> dropEnd num x : x : xs
+        applyCommand Undo         = modify $ \(x : xs) -> xs
+        applyCommand (Print num)  = do x : xs <- get
+                                       yield $ singleton $ index x (num - 1)
 
-parseCommand :: String -> Either ParseError Command
+parseCommand :: Text -> Either ParseError Command
 parseCommand string = parseWithWhitespace parser string
 
-parseWithWhitespace :: Parser a -> String -> Either ParseError a
+parseWithWhitespace :: Parser a -> Text -> Either ParseError a
 parseWithWhitespace p = parseWithEof (whitespace >> p)
 
-parseWithEof :: Parser a -> String -> Either ParseError a
+parseWithEof :: Parser a -> Text -> Either ParseError a
 parseWithEof p = parse (p <* eof) ""
 
 parser = appendParser <|> deleteParser <|> printParser <|> undoParser
