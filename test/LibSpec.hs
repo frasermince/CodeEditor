@@ -2,7 +2,7 @@
 module LibSpec (spec) where
 import Test.Hspec
 import Control.Monad.State.Lazy (get, put)
-import Data.Text (Text)
+import Data.ByteString (ByteString)
 import Lib
 import Pipes (Producer, for, each, yield, (>->))
 import Pipes.Prelude (toListM)
@@ -10,8 +10,8 @@ import Control.Monad.Identity (Identity, runIdentity)
 import Control.Monad.State.Strict (runStateT, StateT)
 import Data.Either (isLeft)
 
-type TestMonadStack = StateT [Text] Identity
-unwrap :: TestMonadStack a -> (a, [Text])
+type TestMonadStack = StateT [ByteString] Identity
+unwrap :: TestMonadStack a -> (a, [ByteString])
 unwrap stack = runIdentity $ runStateT stack [""]
 
 getState = head . snd . unwrap
@@ -20,7 +20,7 @@ getValue = head . fst . unwrap
 testProducer :: [Command] -> Producer Command TestMonadStack ()
 testProducer list = for (each list) yield
 
-buildListM :: [Command] -> TestMonadStack [Text]
+buildListM :: [Command] -> TestMonadStack [ByteString]
 buildListM commands = toListM $ ((testProducer commands) >-> evalPipeWithState)
 
 spec :: Spec

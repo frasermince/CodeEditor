@@ -3,8 +3,8 @@ module Main where
 
 import Lib
 import Text.Parsec (ParseError)
-import Data.Text (Text)
-import Data.Text.IO as T
+import Data.ByteString as B
+import Data.ByteString.Char8 as BC
 import qualified Pipes.Prelude as P
 import Pipes (runEffect, (>->), Consumer, Producer, Pipe, Effect)
 import Control.Monad.Except (runExceptT)
@@ -19,11 +19,11 @@ main = do
   where pipeline  :: Int -> Effect ExecMonadStack ()
         pipeline n = producer >-> P.take n >-> parsePipe >-> evalPipe >-> consumer
 
-        producer  :: Producer Text ExecMonadStack ()
-        producer   = P.repeatM (liftIO T.getLine)
+        producer  :: Producer B.ByteString ExecMonadStack ()
+        producer   = P.repeatM (liftIO B.getLine)
 
-        consumer  :: Consumer Text ExecMonadStack ()
-        consumer   =  P.mapM_ $ \text -> (liftIO $ T.putStrLn text)
+        consumer  :: Consumer B.ByteString ExecMonadStack ()
+        consumer   =  P.mapM_ $ \text -> (liftIO $ BC.putStrLn text)
 
         handleEither :: Either ParseError () -> IO ()
         handleEither (Left e) = Prelude.putStrLn $ "Error: " ++ show e

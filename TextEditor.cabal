@@ -17,7 +17,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     Lib
   build-depends:       base >= 4.7 && < 5
-                     , text
+                     , bytestring >= 0.10
                      , mtl
                      , parsec
                      , pipes
@@ -29,7 +29,7 @@ executable TextEditor-exe
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
                      , TextEditor
-                     , text
+                     , bytestring >= 0.10
                      , mtl
                      , parsec
                      , criterion
@@ -41,7 +41,7 @@ test-suite TextEditor-test
   hs-source-dirs:      test
   main-is:             Main.hs
   build-depends:       base
-                     , text
+                     , bytestring >= 0.10
                      , mtl
                      , hspec
                      , pipes
