@@ -1,25 +1,31 @@
 {-# LANGUAGE OverloadedStrings #-}
 module LibSpec (spec) where
 import Test.Hspec
-import Control.Monad.State.Lazy (get, put)
+import Eval (evalPipeWithState)
+import Parser (parseCommand)
+import Types (Command(..))
 import Data.ByteString (ByteString)
-import Lib
 import Pipes (Producer, for, each, yield, (>->))
 import Pipes.Prelude (toListM)
 import Control.Monad.Identity (Identity, runIdentity)
 import Control.Monad.State.Strict (runStateT, StateT)
 import Data.Either (isLeft)
+import Data.Sequence (Seq)
 
-type TestMonadStack = StateT [ByteString] Identity
-unwrap :: TestMonadStack a -> (a, [ByteString])
+type TestMonadStack = StateT [Seq Char] Identity
+
+-- Unwrap the monad inputint a starting state of [""]
+unwrap :: TestMonadStack a -> (a, [Seq Char])
 unwrap stack = runIdentity $ runStateT stack [""]
 
 getState = head . snd . unwrap
 getValue = head . fst . unwrap
 
+-- A producer for inputing test values
 testProducer :: [Command] -> Producer Command TestMonadStack ()
 testProducer list = for (each list) yield
 
+-- Changes a pipe into a list of values
 buildListM :: [Command] -> TestMonadStack [ByteString]
 buildListM commands = toListM $ ((testProducer commands) >-> evalPipeWithState)
 

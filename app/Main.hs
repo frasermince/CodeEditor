@@ -1,12 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Lib
-import Text.Parsec (ParseError)
+import Eval (evalPipe)
+import Parser (parsePipe)
+import Types (EditorParseError, MonadStack)
 import Data.ByteString as B
 import Data.ByteString.Char8 as BC
 import qualified Pipes.Prelude as P
-import Pipes (runEffect, (>->), Consumer, Producer, Pipe, Effect)
+import Pipes (runEffect, (>->), Consumer, Producer, Effect)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.IO.Class (liftIO)
 
@@ -16,22 +17,16 @@ main = do
   let n = read s
   eitherVal <- runExceptT $ runEffect $ pipeline n
   handleEither eitherVal
-  where pipeline  :: Int -> Effect ExecMonadStack ()
-        pipeline n = producer >-> P.take n >-> parsePipe >-> evalPipe >-> consumer
 
-        producer  :: Producer B.ByteString ExecMonadStack ()
-        producer   = P.repeatM (liftIO B.getLine)
+pipeline  :: Int -> Effect MonadStack ()
+pipeline n = producer >-> P.take n >-> parsePipe >-> evalPipe >-> consumer
 
-        consumer  :: Consumer B.ByteString ExecMonadStack ()
-        consumer   =  P.mapM_ $ \text -> (liftIO $ BC.putStrLn text)
+producer  :: Producer B.ByteString MonadStack ()
+producer   = P.repeatM (liftIO B.getLine)
 
-        handleEither :: Either ParseError () -> IO ()
-        handleEither (Left e) = Prelude.putStrLn $ "Error: " ++ show e
-        handleEither (Right value) = return value
+consumer  :: Consumer (B.ByteString) MonadStack ()
+consumer   =  P.mapM_ $ \text -> (liftIO $ BC.putStrLn text)
 
--- main :: IO ()
--- main = defaultMain [
---   bgroup "editor" [ bench "parse"
-      
-                  -- ]
-                  --  ]
+handleEither :: Either EditorParseError a -> IO ()
+handleEither (Left e) = Prelude.putStrLn $ "Error: " ++ show e
+handleEither (Right value) = return ()
