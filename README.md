@@ -30,8 +30,10 @@ save enough time that I consider it worth it. To make things even faster and mak
 change to attoparsec. However I think this at least demonstrates my abilities fairly well. This has been a great 
 opportunity to learn about pipes, criterion, text types, and generally optimizing a haskell program.
 
-Ways I would want to improve it in the future include: adding better error messages, recovering from incorrectly formatted input,
-migrating to attoparsec, and writing more thorough benchmarks.
+Ways I would want to improve it in the future include: adding better error messages, recovering from incorrectly formatted 
+input, migrating to attoparsec, handling cases where we try to undo history where there is none, handling cases where 
+deletion or printing happens on a index that does not exist in a string, setting a limit on the maximum amount of history 
+that can be kept, and writing more thorough benchmarks.
 
 To run it you should just be able to do:
 `stack build` and then `stack exec textEditor-exe`.
