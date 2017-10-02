@@ -18,12 +18,15 @@ main = do
   eitherVal <- runExceptT $ runEffect $ pipeline n
   handleEither eitherVal
 
+-- Main flow of the program
 pipeline  :: Int -> Effect MonadStack ()
 pipeline n = producer >-> P.take n >-> parsePipe >-> evalPipe >-> consumer
 
+-- Creates a producer that reads each line from IO
 producer  :: Producer B.ByteString MonadStack ()
 producer   = P.repeatM (liftIO B.getLine)
 
+-- Outputs each line
 consumer  :: Consumer (B.ByteString) MonadStack ()
 consumer   =  P.mapM_ $ \text -> (liftIO $ BC.putStrLn text)
 
