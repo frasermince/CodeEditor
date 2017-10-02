@@ -35,7 +35,7 @@ evalOnlyPipeline parses = do eitherVal <- runExceptT $ toListM $ ((for (each par
 main :: IO ()
 main = do
 
-  file <- B.readFile "./input2.txt"
+  file <- B.readFile "./benchInput.txt"
   let n = 1000000
   exceptParses <- runExceptT $ parseList file n
   parses <- handleEitherWithValue exceptParses
