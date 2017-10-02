@@ -12,6 +12,7 @@ import Pipes.Lift (evalStateP)
 import Types (Command(..))
 import Data.Sequence as S
 
+-- This just makes the State monad disappear within the pipe monad stack
 evalPipe :: Monad m => Pipe Command ByteString m ()
 evalPipe = evalStateP [""] evalPipeWithState
 
