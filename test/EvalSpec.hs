@@ -12,18 +12,18 @@ import Data.Sequence (Seq)
 
 type TestMonadStack = StateT [Seq Char] Identity
 
--- Unwrap the monad inputint a starting state of [""]
+-- |Unwrap the monad inputint a starting state of [""]
 unwrap :: TestMonadStack a -> (a, [Seq Char])
 unwrap stack = runIdentity $ runStateT stack [""]
 
 getState = head . snd . unwrap
 getValue = head . fst . unwrap
 
--- A producer for inputing test values
+-- |A producer for inputing test values
 testProducer :: [Command] -> Producer Command TestMonadStack ()
 testProducer list = for (each list) yield
 
--- Changes a pipe into a list of values
+-- |Changes a pipe into a list of values
 buildListM :: [Command] -> TestMonadStack [ByteString]
 buildListM commands = toListM $ ((testProducer commands) >-> evalPipeWithState)
 

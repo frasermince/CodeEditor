@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+-- |Module for parsing input.
 module Parser
   (parsePipe, parseCommand) where
 import Pipes (Pipe, yield, await)
@@ -12,12 +13,14 @@ import Data.Sequence as S
 import Control.Monad (void)
 import Control.Monad (forever)
 
+-- |Pipe used to change the ByteString Input into a Command.
 parsePipe :: Monad m => Pipe ByteString Command (ExceptT EditorParseError m) ()
 parsePipe = forever $ do
   command <- await
   c <- either throwError return (parseCommand command)
   yield c
 
+-- |Function used to parse the ByteString input.
 parseCommand :: B.ByteString -> Either EditorParseError Command
 parseCommand string = parseWithWhitespace parser string
 

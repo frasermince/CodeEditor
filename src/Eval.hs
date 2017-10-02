@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+-- |Module for functions dealing with transforming intermediate Commands to output.
 module Eval
     ( evalPipe
     , evalPipeWithState
@@ -12,10 +13,11 @@ import Pipes.Lift (evalStateP)
 import Types (Command(..))
 import Data.Sequence as S
 
--- This just makes the State monad disappear within the pipe monad stack
+-- |Makes the State monad not be in the resulting monad stack
 evalPipe :: Monad m => Pipe Command ByteString m ()
 evalPipe = evalStateP [""] evalPipeWithState
 
+-- |Pipe to change commands into state and output. To include in most pipes you will want to use the evalPipe helper function instead. The state is stored as a list of sequences. The list represents the history and each sequence is a text state in history.
 evalPipeWithState :: Monad m => Pipe Command ByteString (StateT [(S.Seq Char)] m) ()
 evalPipeWithState = forever $ do command <- await
                                  applyCommand command
